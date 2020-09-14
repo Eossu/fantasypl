@@ -3,7 +3,7 @@
 #
 import asyncio
 import logging
-from typing import List, Set, Union
+from typing import List, Set, Tuple, Union
 
 from httpx import AsyncClient, RequestError
 
@@ -48,7 +48,9 @@ class Client:
         logedin user information.
         """
         if user_id and not isinstance(user_id, int) and not user_id > 0:
-            raise AttributeError(f"User id need to be a positive integer value got {user_id}")
+            raise AttributeError(
+                f"User id need to be a positive integer value got {user_id}"
+            )
         else:
             try:
                 user = await self._httpx.get(self._urls.ME)
@@ -142,11 +144,28 @@ class Client:
 
         return [FplElementSummary(summary.json()) for summary in summaries]
 
-    async def get_player(self, player_id: int) -> FplEntry:
+    async def get_player(
+        self, player_id: int, as_json: bool = False
+    ) -> Union[FplEntry, dict, Tuple[FplEntry, FplElementSummary]]:
         """Get a player"""
-        pass
+        if not player_id or isinstance(player_id, int):
+            raise FplClientError(f"Need and player id got {player_id}")
 
-    async def get_players(self, player_ids: List[int]) -> List[FplEntry]:
+        model = await self.fpl_model
+
+        try:
+            player = next(player for player in model.elements if player.id == player_id)
+        except StopIteration:
+            raise FplClientError(f"There is no player with id {player_id}")
+
+        if as_json:
+            return player.json()
+
+        return FplEntry(player.json())
+
+    async def get_players(
+        self, player_ids: List[int], as_json: bool = False
+    ) -> List[FplEntry]:
         """Get multiple players"""
         pass
 
